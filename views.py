@@ -374,12 +374,9 @@ def read5(request):
     if not employeename:
         return redirect('login')  # Redirect to login if no session found
 
-    try:
-        asset = Asset.objects.filter(employeename=employeename)  # Fetch only logged-in user's assets
-        return render(request, "empassets.html", {'asset': asset})
+    asset = Asset.objects.filter(employeename=employeename)  # Fetch all assets for this user
 
-    except Asset.DoesNotExist:
-        return HttpResponse("No asset records found", status=404)
+    return render(request, "empassets.html", {'asset': asset})
 
 #File Uploads
 def upload_documents(request):
@@ -617,21 +614,27 @@ def adminassets(request):
 def update_asset_status(request, id, status):
     """Update asset status (Active, Inactive, Returned)"""
     try:
-        asset = get_object_or_404(Asset, id=id)  # Fetch asset by ID
-        asset.status = status  # Update status
+        asset = get_object_or_404(Asset, id=id)
+        asset.status = status
         asset.save()
-        
+
         return JsonResponse({'success': True, 'status': asset.status})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
-    
-def return_asset(request, id):
-    asset = get_object_or_404(Asset, id=id)
-    asset.status = "Returned"
-    asset.save()
 
-    return JsonResponse({'success': True, 'status': asset.status})
-    
+def return_asset(request, id):
+    """Mark asset as returned and update message field"""
+    try:
+        asset = get_object_or_404(Asset, id=id)
+        asset.status = "Returned"
+        asset.message = f"Your asset '{asset.assetname}' has been returned."
+        asset.save()
+
+        return JsonResponse({'success': True, 'status': "Returned", 'message': asset.message})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
 def adminpayroll(request):
     pay=Payroll.objects.all()
     context={'pay':pay}
